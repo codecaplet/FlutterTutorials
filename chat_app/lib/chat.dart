@@ -1,5 +1,5 @@
-import 'dart:async';
-
+import 'package:chat_app/firebase/messaging.dart';
+import 'package:chat_app/models/messages_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_bubble/bubble_type.dart';
 import 'package:flutter_chat_bubble/chat_bubble.dart';
@@ -18,7 +18,6 @@ class Chat extends StatefulWidget {
 class ChatState extends State<Chat> {
   TextEditingController _messageController;
   ScrollController _controller;
-  final List<dynamic> messages = [];
   IO.Socket socket;
 
   void _sendMessage() {
@@ -51,11 +50,16 @@ class ChatState extends State<Chat> {
         });
   }
 
-  void initSocket() {
+  Future<void> initSocket() async {
     print('Connecting to chat service');
-    socket = IO.io('https://ff847a462e9a.ngrok.io', <String, dynamic>{
+    String registrationToken = await Messaging.getToken();
+    socket = IO.io('https://16e2-2402-e280-222f-95e-489b-f996-4525-d3e.ngrok.io', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
+      'query': {
+        'userName': widget.user,
+        'registrationToken': registrationToken
+      }
     });
     socket.connect();
     socket.onConnect((_) {
@@ -64,13 +68,13 @@ class ChatState extends State<Chat> {
     socket.on('newChat', (message) {
       print(message);
       setState(() {
-        messages.add(message);
+        MessagesModel.messages.add(message);
       });
     });
     socket.on('allChats', (messages) {
       print(messages);
       setState(() {
-        this.messages.addAll(messages);
+        MessagesModel.messages.addAll(messages);
       });
     });
   }
@@ -125,50 +129,38 @@ class ChatState extends State<Chat> {
               shrinkWrap: true,
               reverse: true,
               cacheExtent: 1000,
-              itemCount: messages.length,
+              itemCount: MessagesModel.messages.length,
               itemBuilder: (BuildContext context, int index) {
-                var message = messages[messages.length - index - 1];
+                var message = MessagesModel.messages[MessagesModel.messages.length - index - 1];
                 return (message['sender'] == widget.user)
                     ? ChatBubble(
-                        clipper:
-                            ChatBubbleClipper1(type: BubbleType.sendBubble),
+                        clipper: ChatBubbleClipper1(type: BubbleType.sendBubble),
                         alignment: Alignment.topRight,
                         margin: EdgeInsets.only(top: 5, bottom: 5),
                         backGroundColor: Colors.yellow[100],
                         child: Container(
-                          constraints:
-                              BoxConstraints(maxWidth: size.width * 0.7),
+                          constraints: BoxConstraints(maxWidth: size.width * 0.7),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('@${message['time']}',
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 10)),
-                              Text('${message['message']}',
-                                  style: TextStyle(
-                                      color: Colors.black, fontSize: 16))
+                              Text('@${message['time']}', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                              Text('${message['message']}', style: TextStyle(color: Colors.black, fontSize: 16))
                             ],
                           ),
                         ),
                       )
                     : ChatBubble(
-                        clipper:
-                            ChatBubbleClipper1(type: BubbleType.receiverBubble),
+                        clipper: ChatBubbleClipper1(type: BubbleType.receiverBubble),
                         alignment: Alignment.topLeft,
                         margin: EdgeInsets.only(top: 5, bottom: 5),
                         backGroundColor: Colors.grey[100],
                         child: Container(
-                          constraints:
-                              BoxConstraints(maxWidth: size.width * 0.7),
+                          constraints: BoxConstraints(maxWidth: size.width * 0.7),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('${message['sender']} @${message['time']}',
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 10)),
-                              Text('${message['message']}',
-                                  style: TextStyle(
-                                      color: Colors.black, fontSize: 16))
+                              Text('${message['sender']} @${message['time']}', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                              Text('${message['message']}', style: TextStyle(color: Colors.black, fontSize: 16))
                             ],
                           ),
                         ),
@@ -192,8 +184,7 @@ class ChatState extends State<Chat> {
                       cursorColor: Colors.black,
                       decoration: InputDecoration(
                         hintText: "Message",
-                        labelStyle:
-                            TextStyle(fontSize: 15, color: Colors.black),
+                        labelStyle: TextStyle(fontSize: 15, color: Colors.black),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(color: Colors.black),
                         ),

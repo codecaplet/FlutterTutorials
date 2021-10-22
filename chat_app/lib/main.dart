@@ -1,8 +1,13 @@
+import 'package:chat_app/firebase/messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'chat.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  Messaging.initializeMessaging();
   runApp(MyApp());
 }
 
@@ -100,7 +105,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ),
                                   ),
                                   style: TextStyle(fontSize: 20),
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: TextInputType.text,
                                   maxLength: 20,
                                 ),
                               ),
